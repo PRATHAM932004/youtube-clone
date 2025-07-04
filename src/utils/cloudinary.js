@@ -24,4 +24,35 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+const deleteFromCloudinary = async (videoURL, resourceType) => {
+  try {
+    if (!videoURL) return null;
+
+    const segments = videoURL.split("/").filter((segment) => segment);
+
+    const uploadIndex = segments.indexOf("upload");
+
+    let publicIdStart = uploadIndex + 1;
+
+    if (segments[publicIdStart].match(/^v\d+$/)) {
+      publicIdStart += 1;
+    }
+
+    const publicIdWithExtension = segments.slice(publicIdStart).join("/");
+    const publicId = publicIdWithExtension.split(".")[0];
+
+    const response = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+    });
+    if (response.result === "ok") {
+      return publicId;
+    } else {
+      console.error("Deletion failed:", response.result);
+      return { success: false, result: response.result };
+    }
+  } catch (error) {
+    return null;
+  }
+};
+
+export { uploadOnCloudinary, deleteFromCloudinary };
