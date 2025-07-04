@@ -175,7 +175,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
   const response = await video.deleteOne();
 
-  if (!response) {
+  if (!response.acknowledged) {
     throw new ApiError(400, "Somting went wrong during video delete");
   }
 
