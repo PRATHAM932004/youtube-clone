@@ -11,6 +11,10 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const userId = req.user._id;
 
+  if (!videoId) {
+    throw new ApiError(404, "VideoId is required");
+  }
+
   const video = await Video.findById(videoId);
   if (!video) {
     throw new ApiError(404, "Video not found");
