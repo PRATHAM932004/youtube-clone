@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  addToWatchHistory,
   deleteVideo,
   getAllVideos,
   getVideoById,
@@ -37,5 +38,7 @@ router
   .patch(upload.single("thumbnail"), updateVideo);
 
 router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
+
+router.route("/addToWatchHistory/:videoId").patch(addToWatchHistory);
 
 export default router;

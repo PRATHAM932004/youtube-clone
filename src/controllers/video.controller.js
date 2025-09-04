@@ -1,3 +1,4 @@
+import { User } from "../models/user.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -210,6 +211,39 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     );
 });
 
+const addToWatchHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user._id;
+
+  if (!videoId) {
+    throw new ApiError(400, "Invalid video id");
+  }
+
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  video.views += 1;
+  await video.save();
+
+  const user = await User.findById(userId);
+
+  user.watchHistory = user.watchHistory.filter((v) => v.toString() !== videoId);
+
+  user.watchHistory.unshift(videoId);
+
+  if (user.watchHistory.length > 50) {
+    user.watchHistory = user.watchHistory.slice(0, 50);
+  }
+
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user.watchHistory, "Watch history updated"));
+});
+
 export {
   getAllVideos,
   publishAVideo,
@@ -217,4 +251,5 @@ export {
   updateVideo,
   deleteVideo,
   togglePublishStatus,
+  addToWatchHistory,
 };
