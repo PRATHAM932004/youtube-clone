@@ -36,18 +36,28 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const [videos, total] = await Promise.all([
-    Video.find(filter).sort(sortOptions).skip(skip).limit(parseInt(limit)),
+    Video.find(filter)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("owner", "fullName avatar")
+      .lean(),
     Video.countDocuments(filter),
   ]);
 
-  res.status(200).json({
-    success: true,
-    page: parseInt(page),
-    limit: parseInt(limit),
-    total,
-    totalPages: Math.ceil(total / limit),
-    data: videos,
-  });
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        videos,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      "Videos fetched successfully"
+    )
+  );
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
