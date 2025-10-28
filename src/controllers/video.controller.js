@@ -82,6 +82,18 @@ const getAllVideos = asyncHandler(async (req, res) => {
         },
       },
       {
+        $addFields: {
+          subscribersCount: { $size: "$subscribers" },
+          isSubscribed: {
+            $cond: {
+              if: { $gt: [req.user._id, null] },
+              then: { $in: [req.user._id, "$subscribers.subscriber"] },
+              else: false,
+            },
+          },
+        },
+      },
+      {
         $project: { subscribers: 0 },
       },
     ]),
