@@ -36,12 +36,37 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const [videos, total] = await Promise.all([
-    Video.find(filter)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate("owner", "fullName avatar")
-      .lean(),
+    Video.aggregate([
+        { $match: filter },
+        { $sort: sortOptions },
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+        {
+          $lookup: {
+            from: "likes",
+            localField: "_id",
+            foreignField: "video",
+            as: "likes",
+          },
+        },
+        {
+          $addFields: {
+            likesCount: { $size: "$likes" },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            pipeline: [{ $project: { fullName: 1, avatar: 1 } }],
+            as: "owner",
+          },
+        },
+        {
+          $unwind: "$owner",
+        },
+      ]),
     Video.countDocuments(filter),
   ]);
 
