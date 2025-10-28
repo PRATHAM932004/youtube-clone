@@ -36,12 +36,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const [videos, total] = await Promise.all([
-    Video.aggregate([
+     Video.aggregate([
       { $match: filter },
       { $sort: sortOptions },
       { $skip: skip },
       { $limit: parseInt(limit) },
-
       {
         $lookup: {
           from: "likes",
@@ -49,14 +48,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
           foreignField: "video",
           as: "likes",
         },
-      },
-      {
-        $addFields: {
-          likesCount: { $size: "$likes" },
-        },
-      },
-      {
-        $project: { likes: 0 },
       },
       {
         $lookup: {
@@ -78,11 +69,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
       },
       {
         $addFields: {
-          subscribersCount: { $size: "$subscribers" },
-        },
-      },
-      {
-        $addFields: {
+          likesCount: { $size: "$likes" },
           subscribersCount: { $size: "$subscribers" },
           isSubscribed: {
             $cond: {
@@ -91,10 +78,20 @@ const getAllVideos = asyncHandler(async (req, res) => {
               else: false,
             },
           },
+          isLiked: {
+            $cond: {
+              if: { $gt: [req.user._id, null] },
+              then: { $in: [req.user._id, "$likes.likedBy"] },
+              else: false,
+            },
+          },
         },
       },
       {
-        $project: { subscribers: 0 },
+        $project: {
+          likes: 0,
+          subscribers: 0,
+        },
       },
     ]),
     Video.countDocuments(filter),
