@@ -37,36 +37,54 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
   const [videos, total] = await Promise.all([
     Video.aggregate([
-        { $match: filter },
-        { $sort: sortOptions },
-        { $skip: skip },
-        { $limit: parseInt(limit) },
-        {
-          $lookup: {
-            from: "likes",
-            localField: "_id",
-            foreignField: "video",
-            as: "likes",
-          },
+      { $match: filter },
+      { $sort: sortOptions },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes",
         },
-        {
-          $addFields: {
-            likesCount: { $size: "$likes" },
-          },
+      },
+      {
+        $addFields: {
+          likesCount: { $size: "$likes" },
         },
-        {
-          $lookup: {
-            from: "users",
-            localField: "owner",
-            foreignField: "_id",
-            pipeline: [{ $project: { fullName: 1, avatar: 1 } }],
-            as: "owner",
-          },
+      },
+      {
+        $project: { likes: 0 },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          pipeline: [{ $project: { fullName: 1, avatar: 1 } }],
+          as: "owner",
         },
-        {
-          $unwind: "$owner",
+      },
+      { $unwind: "$owner" },
+      {
+        $lookup: {
+          from: "subscriptions",
+          localField: "owner._id",
+          foreignField: "channel",
+          as: "subscribers",
         },
-      ]),
+      },
+      {
+        $addFields: {
+          subscribersCount: { $size: "$subscribers" },
+        },
+      },
+      {
+        $project: { subscribers: 0 },
+      },
+    ]),
     Video.countDocuments(filter),
   ]);
 
