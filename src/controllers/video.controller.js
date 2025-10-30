@@ -7,6 +7,7 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
@@ -36,64 +37,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const [videos, total] = await Promise.all([
-     Video.aggregate([
-      { $match: filter },
-      { $sort: sortOptions },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-      {
-        $lookup: {
-          from: "likes",
-          localField: "_id",
-          foreignField: "video",
-          as: "likes",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          pipeline: [{ $project: { fullName: 1, avatar: 1 } }],
-          as: "owner",
-        },
-      },
-      { $unwind: "$owner" },
-      {
-        $lookup: {
-          from: "subscriptions",
-          localField: "owner._id",
-          foreignField: "channel",
-          as: "subscribers",
-        },
-      },
-      {
-        $addFields: {
-          likesCount: { $size: "$likes" },
-          subscribersCount: { $size: "$subscribers" },
-          isSubscribed: {
-            $cond: {
-              if: { $gt: [req.user._id, null] },
-              then: { $in: [req.user._id, "$subscribers.subscriber"] },
-              else: false,
-            },
-          },
-          isLiked: {
-            $cond: {
-              if: { $gt: [req.user._id, null] },
-              then: { $in: [req.user._id, "$likes.likedBy"] },
-              else: false,
-            },
-          },
-        },
-      },
-      {
-        $project: {
-          likes: 0,
-          subscribers: 0,
-        },
-      },
-    ]),
+     Video.find(filter)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("owner", "fullName avatar")
+      .lean(),
     Video.countDocuments(filter),
   ]);
 
@@ -166,7 +115,61 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video id");
   }
 
-  const video = await Video.findById(videoId);
+  const video = await Video.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(videoId) } },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        pipeline: [{ $project: { fullName: 1, avatar: 1 } }],
+        as: "owner",
+      },
+    },
+    { $unwind: "$owner" },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "owner._id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: { $size: "$likes" },
+        subscribersCount: { $size: "$subscribers" },
+        isSubscribed: {
+          $cond: {
+            if: { $gt: [req.user._id, null] },
+            then: { $in: [req.user._id, "$subscribers.subscriber"] },
+            else: false,
+          },
+        },
+        isLiked: {
+          $cond: {
+            if: { $gt: [req.user._id, null] },
+            then: { $in: [req.user._id, "$likes.likedBy"] },
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        likes: 0,
+        subscribers: 0,
+      },
+    },
+  ]);
 
   if (!video) {
     throw new ApiError(400, "Video not found");
