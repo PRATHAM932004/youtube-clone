@@ -102,7 +102,10 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   const likes = await Like.find({ likedBy: userId, video: { $ne: null } })
-    .populate("video")
+    .populate({
+      path: "video",
+      populate: { path: "owner", select: "_id avatar fullName" },
+    })
     .lean();
 
   const videos = likes.map((like) => like.video);
