@@ -282,7 +282,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        avatar,
+        avatar: avatar.secure_url,
       },
     },
     { new: true }
@@ -310,7 +310,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        coverImage: coverImage.url,
+        coverImage: coverImage.secure_url,
       },
     },
     { new: true }
