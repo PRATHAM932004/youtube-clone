@@ -93,7 +93,9 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "username or email is required");
   }
 
-  const user = await User.findOne({ $or: [{ userName: usernameOrEmail }, { email: usernameOrEmail }] });
+  const user = await User.findOne({
+    $or: [{ userName: usernameOrEmail }, { email: usernameOrEmail }],
+  });
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -163,7 +165,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
   // const incomingRefreshToken = req.cookie?.refreshToken || req.body.refreshToken;
   const incomingRefreshToken = req.body.refreshToken;
-  
+
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized request");
   }
@@ -331,7 +333,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        userName: userName?.toLowerCase(),
       },
     },
     {
@@ -348,6 +350,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         localField: "_id",
         foreignField: "subscriber",
         as: "subscribedTo",
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "owner",
+        as: "uploadedVideos",
       },
     },
     {
@@ -377,11 +387,12 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         avatar: 1,
         coverImage: 1,
         email: 1,
+        uploadedVideos: 1,
       },
     },
   ]);
 
-  if (channel?.length > 0) {
+  if (channel?.length == 0) {
     throw new ApiError(400, "channel does't exists");
   }
 
