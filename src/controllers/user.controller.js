@@ -361,13 +361,19 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
+      $lookup: {
+        from: "likes",
+        let: { videoIds: "$uploadedVideos._id" },
+        pipeline: [{ $match: { $expr: { $in: ["$video", "$$videoIds"] } } }],
+        as: "videoLikes",
+      },
+    },
+    {
       $addFields: {
-        subscribersCount: {
-          $size: "$subscribers",
-        },
-        channelsSubscribedToCount: {
-          $size: "$subscribedTo",
-        },
+        subscribersCount: { $size: "$subscribers" },
+        channelsSubscribedToCount: { $size: "$subscribedTo" },
+        uploadedVideosCount: { $size: "$uploadedVideos" },
+        totalLikes: { $size: "$videoLikes" },
         isSubscribed: {
           $cond: {
             if: { $in: [req.user?._id, "$subscribers.subscriber"] },
@@ -387,6 +393,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         avatar: 1,
         coverImage: 1,
         email: 1,
+        totalLikes: 1,
         uploadedVideos: 1,
       },
     },
